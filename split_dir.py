@@ -25,27 +25,28 @@ print total_count
 
 each_total = total_count / int(dir_count)
 
+if dir_path == '.':
+	cur_path = os.getcwd()
+else:
+	cur_path = dir_path
+
 each_count = 0
 dir_tmp_count = 1
 new_dirpath_prefix = 'split_'
-tmp_new_dirpath = new_dirpath_prefix + str(dir_tmp_count)
+tmp_new_dirpath = os.path.basename(cur_path) + '_' + new_dirpath_prefix + str(dir_tmp_count)
 os.system('mkdir ' + os.path.join(dir_path, tmp_new_dirpath))
 for i in os.walk(dir_path):
+	print i[0], i[1], i[2]
+	if i[0] != cur_path: #ignore child dir
+		break;
 	for j in i[2]:
 		tmp = os.path.splitext(j) 
 		if tmp[1] == file_postfix:
 			each_count += 1
 			os.system('cp '+ i[0] + '/'+ j + ' ' + dir_path + '/' + tmp_new_dirpath)
-			if each_count == each_total:
-				each_count = 0
-				dir_tmp_count += 1
-				tmp_new_dirpath = new_dirpath_prefix + str(dir_tmp_count)
+		if each_count == each_total:
+			each_count = 0
+			dir_tmp_count += 1
+			if dir_tmp_count <= int(dir_count):
+				tmp_new_dirpath = os.path.basename(cur_path) + '_' + new_dirpath_prefix + str(dir_tmp_count)
 				os.system('mkdir ' + os.path.join(dir_path, tmp_new_dirpath))
-
-
-'''
-for i in range(5):
-	print dir_path + str(i)
-
-print os.listdir(dir_path)
-'''
