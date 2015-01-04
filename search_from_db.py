@@ -4,6 +4,8 @@ import os, sys, redis, Image
 import color_histogram as ah
 
 base_dir = '/home/simon/bigdata/contest_data/clothes/clothes_image/'
+results_dir = './results'
+top_n = 100
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
@@ -13,6 +15,7 @@ if __name__ == '__main__':
 
     db_num = 0 
     #target = ah.get_color_histogram(ah.otsu_rgb(im_path))
+    #target = ah.get_color_histogram(Image.open(im_path).resize(ah.new_size))
     target = ah.get_color_histogram(ah.otsu_hsiv(im_path, 'hsv'))
     print target
     #target = ah.get_added_color_histogram(ah.get_color_histogram(ah.otsu_rgb(im_path)))
@@ -30,8 +33,8 @@ if __name__ == '__main__':
     results = {}
     cos_result = {}
 
-    os.system('rm -rf results')
-    os.mkdir('./results')
+    os.system('rm -rf ' + results_dir)
+    os.mkdir(results_dir)
 
     count = 1
     for tmp_key in all_keyset:
@@ -44,16 +47,16 @@ if __name__ == '__main__':
    # for key, val in sorted_cos:
    #     print key, val 
 
-    print 'eee'
+    #get data from set of redis
     total_results = 0
-    for tmp_key, tmp_val in sorted_cos[0:100]:
+    for tmp_key, tmp_val in sorted_cos[0:top_n]:
         print tmp_key, tmp_val
         tmp_set_total = r.scard(tmp_key)
-        if total_results + tmp_set_total > 100:
-            while total_results <= 100:
+        if total_results + tmp_set_total > top_n:
+            while total_results <= top_n:
                 path = r.srandmember(tmp_key)
                 print path
-                tmp_os = 'cp '+ base_dir + path +' ./results'
+                tmp_os = 'cp '+ base_dir + path + ' ' + results_dir
                 os.system(tmp_os)
                 total_results += 1
             break
@@ -62,13 +65,5 @@ if __name__ == '__main__':
             path_list = r.smembers(tmp_key)
             for path in path_list:
                 print path
-                tmp_os = 'cp '+ base_dir + path+ ' ./results'
+                tmp_os = 'cp '+ base_dir + path + ' ' + results_dir
                 os.system(tmp_os)
-
-'''
-        if hamming(h, int(tmp)) <= 5:
-            path = r.get(tmp)
-            print path
-            tmp_os = 'cp '+path+' ./results'
-            os.system(tmp_os)
-'''

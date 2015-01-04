@@ -5,13 +5,10 @@
                 By simonxia
 '''
 import Image, redis, string, math, os
-image_path = './shoes_250001.jpg'
-#image_path = '/home/simon/Pictures/DSC00587.JPG'
 Allowed_error = 0.0001
 new_len = 512
 new_high = 512
 new_size = (new_len,new_high)
-im = Image.open(image_path).resize(new_size)
 
 def float_equal(f1, f2):
     return math.fabs(f1-f2) <= Allowed_error
@@ -271,7 +268,7 @@ def otsu_hsiv(image_path, method):
             max_inter_class_var = tmp_inter_class_val
             best = tmp_test
 
-    print best
+    #print best
 
     '''
     #old implemention
@@ -299,7 +296,7 @@ def otsu_hsiv(image_path, method):
             max_inter_class_var = tmp_inter_class_val
             best = tmp_test
 
-    print best
+    #print best
     '''
 
     if method == 'hsi':
@@ -480,10 +477,3 @@ def similarity_measure_cm1(list1, list2):
 
     return ret
 
-
-
-
-#get_added_color_histogram(get_color_histogram(otsu_rgb(image_path)))
-otsu_rgb(image_path).show()
-otsu_hsiv(image_path, 'hsv').show()
-otsu_hsiv(image_path, 'hsi').show()

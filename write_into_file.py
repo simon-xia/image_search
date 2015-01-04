@@ -18,7 +18,7 @@ def write_into_file(dir_path, output_filename):
         val = f
         print count, f
         # strictly follow the protocol
-        tmp_str = '*3\r\n$3\r\nSET\r\n$' + str(len(str(key))) + '\r\n' + str(key) + '\r\n$' + str(len(val)) + '\r\n$' + str(val) + '\r\n'
+        tmp_str = '*3\r\n$4\r\nSADD\r\n$' + str(len(str(key))) + '\r\n' + str(key) + '\r\n$' + str(len(val)) + '\r\n' + str(val) + '\r\n'
         fileHandle.write(tmp_str)  
         count += 1
 
