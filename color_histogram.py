@@ -4,9 +4,8 @@
         Dec. 24 2014
                 By simonxia
 '''
-import Image, redis, string, math, os, glob, sys
-EXTS = 'jpg', 'jpeg', 'JPG', 'JPEG', 'gif', 'GIF', 'png', 'PNG'
-image_path = './clothes_250001.jpg'
+import Image, redis, string, math, os
+image_path = './shoes_250001.jpg'
 #image_path = '/home/simon/Pictures/DSC00587.JPG'
 Allowed_error = 0.0001
 new_len = 512
@@ -27,17 +26,21 @@ def rgb_to_hsv(rgb):
     if three_sum == 0:
         r = g = b = 1.0/3   #mark
     else:
-        r = float(rgb[0]) / three_sum
-        g = float(rgb[1]) / three_sum
-        b = float(rgb[2]) / three_sum
+        #r = float(rgb[0]) / three_sum
+        #g = float(rgb[1]) / three_sum
+        #b = float(rgb[2]) / three_sum
+        # change to follow the formula strictly, makes no big difference
+        r = float(rgb[0]) / 255
+        g = float(rgb[1]) / 255
+        b = float(rgb[2]) / 255
 
     tmp_min = min(r, g, b)
     tmp_max = max(r, g, b)
     if float_equal(tmp_max, tmp_min):
         h = 0
-    elif float_equal(tmp_max, r) and int(g) >= int(b):
+    elif float_equal(tmp_max, r) and g >= b:
         h = float(60*(g-b))/(tmp_max - tmp_min)
-    elif float_equal(tmp_max, r) and int(g) < int(b):
+    elif float_equal(tmp_max, r) and g < b:
         h = float(60*(g-b))/(tmp_max - tmp_min) + 360
     elif float_equal(tmp_max, g):
         h = float(60*(b-r))/(tmp_max - tmp_min) + 120
@@ -114,14 +117,24 @@ def quantize_hsi(hsi):
     
 
 #turn string '[111,112,...119]' into a list
-def str_to_list(string):
-    no_brackets_str = string[1:len(string)-2]
+def str_to_list(string, element_type):
+    no_brackets_str = string[1:len(string)-1]
     tmp_list = no_brackets_str.split(',')
     new_list = []
-    for elm in tmp_list:
-        new_list.append(int(elm))
+    if (element_type == 'int'):
+        for elm in tmp_list:
+            new_list.append(int(elm))
+    elif (element_type == 'float'):
+        for elm in tmp_list:
+            new_list.append(float(elm))
 
     return new_list 
+
+############
+# calculate the cosine similiarity
+############
+def get_cos(list1, list2):
+    return float(get_dot_product(list1, list2)) / (get_module(list1)*get_module(list2))
 
 def get_dot_product(list1, list2):
     lenth = len(list1)
@@ -136,19 +149,22 @@ def get_module(arg_list):
         result += math.pow(arg_list[i],2)
     return math.sqrt(result)
     
-def get_cos(list1, list2):
-    return float(get_dot_product(list1, list2)) / (get_module(list1)*get_module(list2))
 
 #get grey scale from RGB
 def get_grey_scale(rgb):
     return rgb[0]*0.299 + rgb[1]*0.587 + rgb[2]*0.114
 
-def get_avg_of_list(list_arg):
-    return reduce(lambda x, y: x + y, list_arg) / len(list_arg)
-
+#############
+#calculate the inter class variance
+#############
 def get_inter_class_variance(list1, list2):
     return math.pow((get_avg_of_list(list1) - get_avg_of_list(list2)), 2) * len(list1) * len(list2) / math.pow((len(list1) + len(list2)), 2)
 
+def get_avg_of_list(list_arg):
+    return reduce(lambda x, y: x + y, list_arg) / len(list_arg)
+
+
+#judge edge
 def is_in_edge(i, j):
     edge_len = new_high/8
     if i < edge_len or i > edge_len*7 or j < edge_len or j > edge_len*7:
@@ -182,11 +198,12 @@ def judge_front_bg(im, height, width, best, method):
                 elif tmp > best:
                     upper_count += 1
 
+    #print lower_count, upper_count
     return 0 if lower_count < upper_count else 1
 
-
-
+#otsu method for hsv and hsi
 def otsu_hsiv(image_path, method):
+    pixel_total = new_len * new_high
     im = Image.open(image_path).resize(new_size)
     rgb_data_list = list(im.getdata())
     white_pixel = (255, 255, 255)
@@ -197,6 +214,67 @@ def otsu_hsiv(image_path, method):
         elif method == 'hsv':
             quantized_data.append(quantize_hsi(rgb_to_hsv(tmp_rgb)))
 
+    #new inplemention
+    sorted_quantized_data = sorted(quantized_data) 
+
+    diff_index_set  = []
+    for tmp_index in range(len(sorted_quantized_data)):
+        if tmp_index == 0:
+            diff_index_set.append(tmp_index)
+            continue
+
+        if sorted_quantized_data[tmp_index - 1] != sorted_quantized_data[tmp_index]:
+            diff_index_set.append(tmp_index)
+
+    accumulated_set = []
+
+    tmp_total = 0
+    tmp_index = 1
+    lenth_of_diff_index_set = len(diff_index_set)
+    k = list(enumerate(sorted_quantized_data))
+    for i in k:
+        #print i
+        if tmp_index == lenth_of_diff_index_set:
+            tmp_total += i[1]
+            continue
+
+        if i[0] != diff_index_set[tmp_index]:
+            tmp_total += i[1]
+        else:
+            accumulated_set.append(tmp_total)
+            tmp_total += i[1]       #mark
+            tmp_index += 1
+    accumulated_set.append(tmp_total)
+
+    accumulated_total = tmp_total
+
+    lower_bound= min(quantized_data)
+    upper_bound= max(quantized_data)
+    max_inter_class_var = 0
+    best= 0
+    split_index = 0
+    for tmp_test in range(lower_bound, upper_bound):
+        for tmp_split in list(enumerate(diff_index_set)):
+            if sorted_quantized_data[tmp_split[1]] == tmp_test:
+                split_index = tmp_split[0]
+                break
+        if split_index == 0 or split_index == lenth_of_diff_index_set - 1:
+            continue
+
+        count_less = diff_index_set[split_index]
+        count_greater = pixel_total - diff_index_set[split_index + 1]
+        avg_less = float(accumulated_set[split_index-1]) / count_less
+        avg_greater = float(accumulated_total - accumulated_set[split_index]) / count_greater 
+
+        tmp_inter_class_val = float(math.pow(avg_greater - avg_less, 2) * count_less * count_greater) / math.pow(pixel_total, 2)
+        if  tmp_inter_class_val > max_inter_class_var:
+            max_inter_class_var = tmp_inter_class_val
+            best = tmp_test
+
+    print best
+
+    '''
+    #old implemention
     max_inter_class_var = 0
     best= 0
     lower_bound= min(quantized_data)
@@ -222,9 +300,10 @@ def otsu_hsiv(image_path, method):
             best = tmp_test
 
     print best
+    '''
 
     if method == 'hsi':
-        if judge_front_bg(im, new_high, new_len, best, method) == 1:
+        if judge_front_bg(im, new_high, new_len, best, method) == 0:
             for i in range(new_high):
                 for j in range(new_len):
                     if quantize_hsi(rgb_to_hsi(im.getpixel((i,j)))) < best:
@@ -235,12 +314,7 @@ def otsu_hsiv(image_path, method):
                     if quantize_hsi(rgb_to_hsi(im.getpixel((i,j)))) > best:
                         im.putpixel((i, j), white_pixel)
     elif method == 'hsv':
-        for i in range(new_high):
-            for j in range(new_len):
-                if quantize_hsi(rgb_to_hsv(im.getpixel((i,j)))) < best:
-                    im.putpixel((i, j), white_pixel)
-        '''
-        if judge_front_bg(im, new_high, new_len, best, method) == 1:
+        if judge_front_bg(im, new_high, new_len, best, method) == 0:
             for i in range(new_high):
                 for j in range(new_len):
                     if quantize_hsi(rgb_to_hsv(im.getpixel((i,j)))) < best:
@@ -250,10 +324,10 @@ def otsu_hsiv(image_path, method):
                 for j in range(new_len):
                     if quantize_hsi(rgb_to_hsv(im.getpixel((i,j)))) > best:
                         im.putpixel((i, j), white_pixel)
-'''
     return im 
 
 
+#otsu method for RGB
 def otsu_rgb(image_path):
     im = Image.open(image_path).resize(new_size)
     rgb_data_list = list(im.getdata())
@@ -288,14 +362,14 @@ def otsu_rgb(image_path):
 
     for i in range(new_high):
         for j in range(new_len):
-            if get_grey_scale(im.getpixel((i,j))) >= best_grey:
+            if get_grey_scale(im.getpixel((i,j))) >= best_grey: #to be modify, judge before paint white
                 im.putpixel((i, j), white_pixel)
             if is_in_edge(i, j):  #ignore the edge
                 im.putpixel((i, j), white_pixel)
 
     return im 
 
-
+#get 64RGB color histogram, divide each color channel into 4 section
 def get_color_histogram(im):
     divide_level = 64
     color_dic = {}
@@ -320,6 +394,7 @@ def get_color_histogram(im):
     #print result_list
     return result_list
 
+#get accumulative histogram for 64RGB color histogram
 def get_added_color_histogram(color_list):
     added_list = []
     i = 0
@@ -330,6 +405,7 @@ def get_added_color_histogram(color_list):
     #print added_list
     return added_list
 
+
 def get_intersection_of_histogram(list1, list2):
     tmp_sum = 0
     if len(list1) != len(list2):
@@ -338,32 +414,76 @@ def get_intersection_of_histogram(list1, list2):
         tmp_sum += list1[i] if list1[i] < list2[i] else list2[i]
     return tmp_sum
 
-def add_into_db(db_fd, dir_path):
-    os.chdir(dir_path)
-    images = []
-    for ext in EXTS:
-        images.extend(glob.glob('*.%s' % ext))
+#calculate color moment after otsu-hsv
+def color_moment_hsv(im):
+    rgb_data_list = list(im.getdata())
+    hsv_data_list = []
 
-    count = 1
-    for f in images:
-        print count, f
-        db_fd.set(get_color_histogram(otsu_rgb(f)), dir_path+'/'+f)
-        count += 1
-        #db_fd.set(get_added_color_histogram(get_color_histogram(otsu_rgb(f))), dir_path+'/'+f)
+    for i in rgb_data_list:
+        hsv_data_list.append(rgb_to_hsv(i))
 
+    miu_h = 0; miu_s = 0; miu_v = 0
+    for i in hsv_data_list:
+        miu_h += i[0]
+        miu_s += i[1]
+        miu_v += i[2]
 
-'''
+    miu_h = float(miu_h) / (new_len * new_high)
+    miu_s = float(miu_s) / (new_len * new_high)
+    miu_v = float(miu_v) / (new_len * new_high)
 
-if __name__ == '__main__':
-    db_num = 1
-    if len(sys.argv) != 2:
-        print "Usage: %s <image dir>" % sys.argv[0]
+    delta_h = 0.0; delta_s = 0.0; delta_v = 0.0
+    theta_h = 0.0; theta_s = 0.0; theta_v = 0.0
+    for i in hsv_data_list:
+        delta_h += (i[0] - miu_h)**2
+        delta_s += (i[1] - miu_s)**2
+        delta_v += (i[2] - miu_v)**2
+        theta_h += (i[0] - miu_h)**3
+        theta_s += (i[1] - miu_s)**3
+        theta_v += (i[2] - miu_v)**3
+
+    delta_h = math.sqrt(delta_h / (new_len * new_high))
+    delta_s = math.sqrt(delta_s / (new_len * new_high))
+    delta_v = math.sqrt(delta_v / (new_len * new_high))
+
+    # pow(built in) and math.pow don't support negative
+    # e.g   right: -1**(1.0/3) 
+    #       error: (-1)**(1.0/3) 
+    #theta_h = math.pow(theta_h / (new_len * new_high), 1.0/3)
+    if theta_h < 0:
+        theta_h = - (- theta_h / (new_len * new_high))**(1.0/3)
     else:
-        r = redis.StrictRedis(host='localhost', port=6379, db=db_num)
-        add_into_db(r, sys.argv[1])
-'''
+        theta_h = (theta_h / (new_len * new_high))**(1.0/3)
+
+    if theta_s < 0:
+        theta_s = - (- theta_s / (new_len * new_high))**(1.0/3)
+    else:
+        theta_s = (theta_s / (new_len * new_high))**(1.0/3)
+
+    if theta_v < 0:
+        theta_v = - (- theta_v / (new_len * new_high))**(1.0/3)
+    else:
+        theta_v = (theta_v / (new_len * new_high))**(1.0/3)
+
+    return [miu_h, miu_s, miu_v, delta_h, delta_s, delta_v, theta_h, theta_s, theta_v]
+
+def similarity_measure_cm1_helper(a, b):
+    return math.fabs(a - b) / (math.fabs(a) + math.fabs(b))
+
+def similarity_measure_cm1(list1, list2):
+    if len(list1) != len(list2) and len(list1) != 9:
+        return 0
+
+    ret = 0.0
+    for i, j in zip(list1, list2):
+        ret += similarity_measure_cm1_helper(i, j)
+
+    return ret
+
+
+
+
 #get_added_color_histogram(get_color_histogram(otsu_rgb(image_path)))
 otsu_rgb(image_path).show()
 otsu_hsiv(image_path, 'hsv').show()
 otsu_hsiv(image_path, 'hsi').show()
-
