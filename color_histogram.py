@@ -1,5 +1,14 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
+#
+#   
+#  Image lib coordinate system
+#   (0,0)   i
+#       -------->
+#       |  
+#      j|  (i,j)
+#       |
+
 '''
         Dec. 24 2014
                 By simonxia
@@ -171,6 +180,7 @@ def is_in_edge(i, j):
 
 #return 1 for <, 0 for >
 def judge_front_bg(im, height, width, best, method):
+    print "aaa"
     lower_height = height / 5
     upper_height = height / 5 * 4
     lower_width = width / 3
@@ -186,23 +196,24 @@ def judge_front_bg(im, height, width, best, method):
                     lower_count += 1
                 elif tmp > best:
                     upper_count += 1
-    elif method == 'hsv':
-        for i in range(lower_height, upper_height):
-            for j in range(lower_width, upper_width):
+    elif method == 'hsv': #mark
+        for j in range(lower_height, upper_height):
+            for i in range(lower_width, upper_width):
                 tmp = quantize_hsi(rgb_to_hsv(im.getpixel((i, j))))
                 if tmp < best:
                     lower_count += 1
                 elif tmp > best:
                     upper_count += 1
 
-    #print lower_count, upper_count
+    print lower_count, upper_count
     return 0 if lower_count < upper_count else 1
 
 #otsu method for hsv and hsi
-def otsu_hsiv(image_path, method):
-    pixel_total = new_len * new_high
-    im = Image.open(image_path).resize(new_size)
+def otsu_hsiv(im, method):
+    width = im.size[0]
+    height = im.size[1]
     rgb_data_list = list(im.getdata())
+    pixel_total = width * height
     white_pixel = (255, 255, 255)
     quantized_data = []
     for tmp_rgb in rgb_data_list:
@@ -211,6 +222,7 @@ def otsu_hsiv(image_path, method):
         elif method == 'hsv':
             quantized_data.append(quantize_hsi(rgb_to_hsv(tmp_rgb)))
 
+    '''
     #new inplemention
     sorted_quantized_data = sorted(quantized_data) 
 
@@ -296,37 +308,38 @@ def otsu_hsiv(image_path, method):
             max_inter_class_var = tmp_inter_class_val
             best = tmp_test
 
-    #print best
-    '''
+    print best
 
+    print "haha"
     if method == 'hsi':
-        if judge_front_bg(im, new_high, new_len, best, method) == 0:
-            for i in range(new_high):
-                for j in range(new_len):
+        if judge_front_bg(im, height, width, best, method) == 0:
+            for i in range(height):
+                for j in range(width):
                     if quantize_hsi(rgb_to_hsi(im.getpixel((i,j)))) < best:
                         im.putpixel((i, j), white_pixel)
         else:
-            for i in range(new_high):
-                for j in range(new_len):
+            for i in range(height):
+                for j in range(width):
                     if quantize_hsi(rgb_to_hsi(im.getpixel((i,j)))) > best:
                         im.putpixel((i, j), white_pixel)
-    elif method == 'hsv':
-        if judge_front_bg(im, new_high, new_len, best, method) == 0:
-            for i in range(new_high):
-                for j in range(new_len):
+    elif method == 'hsv': #mark i, j
+        if judge_front_bg(im, height, width, best, method) == 0:
+            for j in range(height):
+                for i in range(width):
                     if quantize_hsi(rgb_to_hsv(im.getpixel((i,j)))) < best:
                         im.putpixel((i, j), white_pixel)
         else:
-            for i in range(new_high):
-                for j in range(new_len):
+            for j in range(height):
+                for i in range(width):
                     if quantize_hsi(rgb_to_hsv(im.getpixel((i,j)))) > best:
                         im.putpixel((i, j), white_pixel)
     return im 
 
 
 #otsu method for RGB
-def otsu_rgb(image_path):
-    im = Image.open(image_path).resize(new_size)
+def otsu_rgb(im):
+    width = im.size[0]
+    height = im.size[1]
     rgb_data_list = list(im.getdata())
     white_pixel = (255, 255, 255)
     grey_data = []
@@ -357,14 +370,43 @@ def otsu_rgb(image_path):
 
     #print best_grey
 
-    for i in range(new_high):
-        for j in range(new_len):
+    for i in range(height):
+        for j in range(width):
             if get_grey_scale(im.getpixel((i,j))) >= best_grey: #to be modify, judge before paint white
                 im.putpixel((i, j), white_pixel)
             if is_in_edge(i, j):  #ignore the edge
                 im.putpixel((i, j), white_pixel)
 
-    return im 
+    #crop the center part
+    #tmp_crop = (64, 64, 448, 448)
+    return im#.crop(tmp_crop).resize(new_size)
+
+#here is two kinds of histogrm: percent histogram and total mount histogram
+def get_color_histogram_percent(im):
+    width = im.size[0] 
+    height = im.size[1]
+    pixel_total = width * height
+    divide_level = 64
+    color_dic = {}
+
+    for i in range(4):
+        for j in range(4):
+            for k in range(4):
+                color_dic[(i,j,k)] = 0;
+
+    for i in range(width):
+        for j in range(height):
+            tmp_pixel = im.getpixel((i,j))
+            color_dic[(tmp_pixel[0]/divide_level, tmp_pixel[1]/divide_level, tmp_pixel[2]/divide_level)] += 1
+
+    result_list = []
+
+    for i in range(4):
+        for j in range(4):
+            for k in range(4):
+                result_list.append(float(color_dic[(i,j,k)]) / pixel_total)
+    print result_list
+    return result_list
 
 #get 64RGB color histogram, divide each color channel into 4 section
 def get_color_histogram(im):

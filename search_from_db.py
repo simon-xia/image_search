@@ -3,9 +3,10 @@
 import os, sys, redis, Image
 import color_histogram as ah
 
-base_dir = '/home/simon/bigdata/contest_data/clothes/clothes_image/'
+#base_dir = '/home/simon/bigdata/contest_data/clothes/clothes_image/'
+base_dir = '/home/simon/bigdata/contest_data/shoes/shoes_image/'
 results_dir = './results'
-top_n = 100
+top_n = 50
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
@@ -13,12 +14,14 @@ if __name__ == '__main__':
     else:
         im_path = sys.argv[1]
 
-    db_num = 0 
-    #target = ah.get_color_histogram(ah.otsu_rgb(im_path))
-    #target = ah.get_color_histogram(Image.open(im_path).resize(ah.new_size))
-    target = ah.get_color_histogram(ah.otsu_hsiv(im_path, 'hsv'))
-    print target
-    #target = ah.get_added_color_histogram(ah.get_color_histogram(ah.otsu_rgb(im_path)))
+    db_num = 1
+    im = Image.open(im_path).resize(ah.new_size)
+    #im = Image.open(im_path)
+    #target = ah.get_color_histogram(im)
+    #target = ah.get_color_histogram(ah.otsu_rgb(im))
+    target = ah.get_color_histogram(ah.otsu_hsiv(im, 'hsv'))
+    #print target
+    #target = ah.get_added_color_histogram(ah.get_color_histogram(ah.otsu_rgb(im)))
 
     histogram_sum_target = 0
     for i in target:
@@ -49,8 +52,8 @@ if __name__ == '__main__':
 
     #get data from set of redis
     total_results = 0
-    for tmp_key, tmp_val in sorted_cos[0:top_n]:
-        print tmp_key, tmp_val
+    for tmp_key, tmp_val in sorted_cos[0:]:
+        #print tmp_key, tmp_val
         tmp_set_total = r.scard(tmp_key)
         if total_results + tmp_set_total > top_n:
             while total_results <= top_n:
