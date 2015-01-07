@@ -3,10 +3,10 @@
 import os, sys, redis, Image
 import color_histogram as ah
 
-#base_dir = '/home/simon/bigdata/contest_data/clothes/clothes_image/'
-base_dir = '/home/simon/bigdata/contest_data/shoes/shoes_image/'
+base_dir = '/home/simon/bigdata/contest_data/clothes/clothes_image/'
+#base_dir = '/home/simon/bigdata/contest_data/shoes/shoes_image/'
 results_dir = './results'
-top_n = 50
+top_n = 500
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
@@ -14,12 +14,13 @@ if __name__ == '__main__':
     else:
         im_path = sys.argv[1]
 
-    db_num = 1
+    db_num = 0
     im = Image.open(im_path).resize(ah.new_size)
     #im = Image.open(im_path)
     #target = ah.get_color_histogram(im)
-    #target = ah.get_color_histogram(ah.otsu_rgb(im))
-    target = ah.get_color_histogram(ah.otsu_hsiv(im, 'hsv'))
+    target = ah.get_color_histogram(ah.otsu_rgb(im))
+    #target = ah.get_color_histogram(ah.otsu_hsiv(im, 'hsv'))
+    #target = ah.get_color_histogram_percent(ah.otsu_hsiv(im, 'hsi'))
     #print target
     #target = ah.get_added_color_histogram(ah.get_color_histogram(ah.otsu_rgb(im)))
 
@@ -42,7 +43,8 @@ if __name__ == '__main__':
     count = 1
     for tmp_key in all_keyset:
         #print count
-        cos_result[tmp_key] = float(ah.get_intersection_of_histogram(target, ah.str_to_list(tmp_key, 'int'))) / histogram_sum_target * ah.get_cos(ah.str_to_list(tmp_key, 'int'), target)
+        cos_result[tmp_key] = ah.get_intersection_of_histogram(target, ah.str_to_list(tmp_key, 'float')) * ah.get_cos(ah.str_to_list(tmp_key, 'float'), target)
+        #cos_result[tmp_key] = float(ah.get_intersection_of_histogram(target, ah.str_to_list(tmp_key, 'int'))) / histogram_sum_target * ah.get_cos(ah.str_to_list(tmp_key, 'int'), target)
         count += 1
 
     sorted_cos = sorted(cos_result.items(), lambda x, y: cmp(x[1], y[1]), reverse=True)

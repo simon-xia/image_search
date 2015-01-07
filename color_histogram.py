@@ -405,7 +405,7 @@ def get_color_histogram_percent(im):
         for j in range(4):
             for k in range(4):
                 result_list.append(float(color_dic[(i,j,k)]) / pixel_total)
-    print result_list
+    #print result_list
     return result_list
 
 #get 64RGB color histogram, divide each color channel into 4 section
@@ -446,7 +446,7 @@ def get_added_color_histogram(color_list):
 
 
 def get_intersection_of_histogram(list1, list2):
-    tmp_sum = 0
+    tmp_sum = 0.0
     if len(list1) != len(list2):
         return 0
     for i in range(64):

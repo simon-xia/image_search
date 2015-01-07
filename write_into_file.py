@@ -4,7 +4,6 @@ import os, sys, glob, multiprocessing, Image
 import color_histogram as ah
 
 EXTS = ['jpg']
-Origin_path = os.getcwd()
 
 #error in this function may cause IndexError of Pool
 def calculate_fingerprint(filename):
