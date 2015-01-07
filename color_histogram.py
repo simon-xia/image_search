@@ -32,13 +32,14 @@ def rgb_to_hsv(rgb):
     if three_sum == 0:
         r = g = b = 1.0/3   #mark
     else:
-        #r = float(rgb[0]) / three_sum
-        #g = float(rgb[1]) / three_sum
-        #b = float(rgb[2]) / three_sum
+        #paper's solution
+        r = float(rgb[0]) / three_sum
+        g = float(rgb[1]) / three_sum
+        b = float(rgb[2]) / three_sum
         # change to follow the formula strictly, makes no big difference
-        r = float(rgb[0]) / 255
-        g = float(rgb[1]) / 255
-        b = float(rgb[2]) / 255
+        #r = float(rgb[0]) / 255
+        #g = float(rgb[1]) / 255
+        #b = float(rgb[2]) / 255
 
     tmp_min = min(r, g, b)
     tmp_max = max(r, g, b)
@@ -171,16 +172,15 @@ def get_avg_of_list(list_arg):
 
 
 #judge edge
-def is_in_edge(i, j):
-    edge_len = new_high/8
-    if i < edge_len or i > edge_len*7 or j < edge_len or j > edge_len*7:
+def is_in_edge(i, j, width, height):
+    if i < width/8 or i > width*7/8 or j < height/8 or j > height*7/8 :
         return True
     else:
         return False
 
 #return 1 for <, 0 for >
 def judge_front_bg(im, height, width, best, method):
-    print "aaa"
+    pixel_map = im.load()
     lower_height = height / 5
     upper_height = height / 5 * 4
     lower_width = width / 3
@@ -191,7 +191,7 @@ def judge_front_bg(im, height, width, best, method):
     if method == 'hsi':
         for i in range(lower_height, upper_height):
             for j in range(lower_width, upper_width):
-                tmp = quantize_hsi(rgb_to_hsi(im.getpixel((i, j))))
+                tmp = quantize_hsi(rgb_to_hsi(pixel_map[i, j]))
                 if tmp < best:
                     lower_count += 1
                 elif tmp > best:
@@ -199,13 +199,13 @@ def judge_front_bg(im, height, width, best, method):
     elif method == 'hsv': #mark
         for j in range(lower_height, upper_height):
             for i in range(lower_width, upper_width):
-                tmp = quantize_hsi(rgb_to_hsv(im.getpixel((i, j))))
+                tmp = quantize_hsi(rgb_to_hsv(pixel_map[i, j]))
                 if tmp < best:
                     lower_count += 1
                 elif tmp > best:
                     upper_count += 1
 
-    print lower_count, upper_count
+    #print lower_count, upper_count
     return 0 if lower_count < upper_count else 1
 
 #otsu method for hsv and hsi
@@ -280,8 +280,6 @@ def otsu_hsiv(im, method):
             max_inter_class_var = tmp_inter_class_val
             best = tmp_test
 
-    #print best
-
     '''
     #old implemention
     max_inter_class_var = 0
@@ -308,31 +306,32 @@ def otsu_hsiv(im, method):
             max_inter_class_var = tmp_inter_class_val
             best = tmp_test
 
-    print best
+    #print best
 
-    print "haha"
+    pixel_map = im.load()
     if method == 'hsi':
         if judge_front_bg(im, height, width, best, method) == 0:
-            for i in range(height):
-                for j in range(width):
-                    if quantize_hsi(rgb_to_hsi(im.getpixel((i,j)))) < best:
-                        im.putpixel((i, j), white_pixel)
+            for j in range(height):
+                for i in range(width):
+                    if quantize_hsi(rgb_to_hsi(pixel_map[i,j])) < best:
+                        pixel_map[i, j] = white_pixel
         else:
-            for i in range(height):
-                for j in range(width):
-                    if quantize_hsi(rgb_to_hsi(im.getpixel((i,j)))) > best:
-                        im.putpixel((i, j), white_pixel)
+            for j in range(height):
+                for i in range(width):
+                    if quantize_hsi(rgb_to_hsi(pixel_map[i,j])) > best:
+                        pixel_map[i, j] = white_pixel
     elif method == 'hsv': #mark i, j
         if judge_front_bg(im, height, width, best, method) == 0:
             for j in range(height):
                 for i in range(width):
-                    if quantize_hsi(rgb_to_hsv(im.getpixel((i,j)))) < best:
-                        im.putpixel((i, j), white_pixel)
+                    if quantize_hsi(rgb_to_hsv(pixel_map[i, j])) < best:
+                        pixel_map[i, j] = white_pixel
         else:
             for j in range(height):
                 for i in range(width):
-                    if quantize_hsi(rgb_to_hsv(im.getpixel((i,j)))) > best:
-                        im.putpixel((i, j), white_pixel)
+                    if quantize_hsi(rgb_to_hsv(pixel_map[i, j])) > best:
+                        pixel_map[i, j] = white_pixel
+
     return im 
 
 
@@ -370,12 +369,13 @@ def otsu_rgb(im):
 
     #print best_grey
 
-    for i in range(height):
-        for j in range(width):
-            if get_grey_scale(im.getpixel((i,j))) >= best_grey: #to be modify, judge before paint white
-                im.putpixel((i, j), white_pixel)
-            if is_in_edge(i, j):  #ignore the edge
-                im.putpixel((i, j), white_pixel)
+    pixel_map = im.load()
+    for j in range(height):
+        for i in range(width):
+            if get_grey_scale(pixel_map[i, j]) >= best_grey: #to be modify, judge before paint white
+                pixel_map[i, j] = white_pixel
+            if is_in_edge(i, j, width, height):  #ignore the edge
+                pixel_map[i, j] = white_pixel
 
     #crop the center part
     #tmp_crop = (64, 64, 448, 448)

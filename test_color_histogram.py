@@ -12,7 +12,7 @@ new_size = (new_len,new_high)
 if __name__ == '__main__':
     im = Image.open(image_path).resize(new_size)
     #ah.get_added_color_histogram(ah.get_color_histogram(ah.otsu_rgb(image_path)))
-    ah.otsu_rgb(im).show()
+    #ah.otsu_rgb(im).show()
     ah.otsu_hsiv(im, 'hsv').show()
     ah.otsu_hsiv(im, 'hsi').show()
 
