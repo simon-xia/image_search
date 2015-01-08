@@ -222,8 +222,8 @@ def otsu_hsiv(im, method):
         elif method == 'hsv':
             quantized_data.append(quantize_hsi(rgb_to_hsv(tmp_rgb)))
 
-    '''
     #new inplemention
+    ####
     sorted_quantized_data = sorted(quantized_data) 
 
     diff_index_set  = []
@@ -279,9 +279,11 @@ def otsu_hsiv(im, method):
         if  tmp_inter_class_val > max_inter_class_var:
             max_inter_class_var = tmp_inter_class_val
             best = tmp_test
+    ####
 
     '''
     #old implemention
+    ####
     max_inter_class_var = 0
     best= 0
     lower_bound= min(quantized_data)
@@ -305,7 +307,9 @@ def otsu_hsiv(im, method):
         if  tmp_inter_class_val > max_inter_class_var:
             max_inter_class_var = tmp_inter_class_val
             best = tmp_test
+    ####
 
+    '''
     #print best
 
     pixel_map = im.load()
