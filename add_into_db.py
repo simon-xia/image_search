@@ -1,5 +1,12 @@
 #!/usr/bin/python
 
+'''
+    Add each Image's fingerprint into DB with key-value pair
+
+                                            Dec. 28 2014
+                                                By Simon Xia
+'''
+
 import redis, sys, os, glob
 import color_histogram as ah
 

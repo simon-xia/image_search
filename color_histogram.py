@@ -10,9 +10,26 @@
 #       |
 
 '''
-        Dec. 24 2014
-                By simonxia
+    Some basic color based Image Algorithms
+            
+            including:
+                - Image description
+                    - color histogram with count: get_color_histogram()
+                    - color histogram with percent: get_color_histogram_percent()
+                - Otsu method with different color space
+                    - RGB: otsu_rgb()
+                    - HSV/HSI: otsu_hsiv()
+                - Color moment method
+                    - HSV: color_moment_hsv()
+                - Similarity computing
+                    - cosine: get_cos()
+                    - intersection of histogram: get_intersection_of_histogram()
+
+
+                                                                    Dec. 24 2014
+                                                                            By simonxia
 '''
+
 import Image, redis, string, math, os
 Allowed_error = 0.0001
 new_len = 512
@@ -32,11 +49,12 @@ def rgb_to_hsv(rgb):
     if three_sum == 0:
         r = g = b = 1.0/3   #mark
     else:
+        #two ways makes no big difference
         #paper's solution
         r = float(rgb[0]) / three_sum
         g = float(rgb[1]) / three_sum
         b = float(rgb[2]) / three_sum
-        # change to follow the formula strictly, makes no big difference
+        #follow the formula strictly
         #r = float(rgb[0]) / 255
         #g = float(rgb[1]) / 255
         #b = float(rgb[2]) / 255
@@ -138,7 +156,7 @@ def str_to_list(string, element_type):
     return new_list 
 
 ############
-# calculate the cosine similiarity
+# calculate the cosine similarity
 ############
 def get_cos(list1, list2):
     return float(get_dot_product(list1, list2)) / (get_module(list1)*get_module(list2))
@@ -171,13 +189,14 @@ def get_avg_of_list(list_arg):
     return reduce(lambda x, y: x + y, list_arg) / len(list_arg)
 
 
-#judge edge
+#judge edge, choose 1/8 of width and height
 def is_in_edge(i, j, width, height):
     if i < width/8 or i > width*7/8 or j < height/8 or j > height*7/8 :
         return True
     else:
         return False
 
+#decide which is front and which is background
 #return 1 for <, 0 for >
 def judge_front_bg(im, height, width, best, method):
     pixel_map = im.load()
@@ -210,8 +229,7 @@ def judge_front_bg(im, height, width, best, method):
 
 #otsu method for hsv and hsi
 def otsu_hsiv(im, method):
-    width = im.size[0]
-    height = im.size[1]
+    (width, height) = im.size
     rgb_data_list = list(im.getdata())
     pixel_total = width * height
     white_pixel = (255, 255, 255)
@@ -222,7 +240,13 @@ def otsu_hsiv(im, method):
         elif method == 'hsv':
             quantized_data.append(quantize_hsi(rgb_to_hsv(tmp_rgb)))
 
-    #new inplemention
+    # new inplemention
+    #
+    #   Accomplished in following steps:
+    #       sort the quantized data first
+    #       find the key index, which is the bound of a sequence equal number
+    #       calculate accumulated value in each key index
+    #       use the above infomation to apart the quantized data set by threshold value (阈值)
     ####
     sorted_quantized_data = sorted(quantized_data) 
 
@@ -312,7 +336,7 @@ def otsu_hsiv(im, method):
     '''
     #print best
 
-    pixel_map = im.load()
+    pixel_map = im.load() #load() is much faster than getpixel()
     if method == 'hsi':
         if judge_front_bg(im, height, width, best, method) == 0:
             for j in range(height):
@@ -341,8 +365,7 @@ def otsu_hsiv(im, method):
 
 #otsu method for RGB
 def otsu_rgb(im):
-    width = im.size[0]
-    height = im.size[1]
+    (width, height) = im.size
     rgb_data_list = list(im.getdata())
     white_pixel = (255, 255, 255)
     grey_data = []
@@ -381,14 +404,11 @@ def otsu_rgb(im):
             if is_in_edge(i, j, width, height):  #ignore the edge
                 pixel_map[i, j] = white_pixel
 
-    #crop the center part
-    #tmp_crop = (64, 64, 448, 448)
-    return im#.crop(tmp_crop).resize(new_size)
+    return im
 
 #here is two kinds of histogrm: percent histogram and total mount histogram
 def get_color_histogram_percent(im):
-    width = im.size[0] 
-    height = im.size[1]
+    (width, height) = im.size
     pixel_total = width * height
     divide_level = 64
     color_dic = {}
@@ -414,6 +434,7 @@ def get_color_histogram_percent(im):
 
 #get 64RGB color histogram, divide each color channel into 4 section
 def get_color_histogram(im):
+    (width, height) = im.size
     divide_level = 64
     color_dic = {}
 
@@ -422,8 +443,8 @@ def get_color_histogram(im):
             for k in range(4):
                 color_dic[(i,j,k)] = 0;
 
-    for i in range(new_len):
-        for j in range(new_high):
+    for i in range(width):
+        for j in range(height):
             tmp_pixel = im.getpixel((i,j))
             color_dic[(tmp_pixel[0]/divide_level, tmp_pixel[1]/divide_level, tmp_pixel[2]/divide_level)] += 1
 
@@ -522,4 +543,3 @@ def similarity_measure_cm1(list1, list2):
         ret += similarity_measure_cm1_helper(i, j)
 
     return ret
-

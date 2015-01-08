@@ -1,15 +1,21 @@
 #!/usr/bin/python
+'''
+    write each Image's fingerprint into a file with the format of DB
+
+                                            Jan. 5 2015
+                                                    By Simon Xia
+
+'''
 
 import os, sys, glob, multiprocessing, Image
 import color_histogram as ah
 
 EXTS = ['jpg']
 
-#error in this function may cause IndexError of Pool
 def calculate_fingerprint(filename):
     print filename
     #try:
-    im = Image.open(filename)#.resize((512,512))
+    im = Image.open(filename)#.resize(ah.new_size)
     #except IOError:
     #    os._exit(0)
 
@@ -40,16 +46,15 @@ def write_into_file(dir_path, output_filename):
         images.extend(glob.glob('*.%s' % ext))
 
     total_cpu_count = multiprocessing.cpu_count()
-
     pool = multiprocessing.Pool(total_cpu_count)
 
+    #error in task function may cause IndexError of Pool
     results_list = pool.map(calculate_fingerprint_two, images)
 
     for tmp_result in results_list:
         fileHandle.write(tmp_result)  
 
     fileHandle.close()  
-
     pool.close()
     pool.join()
 
