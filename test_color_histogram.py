@@ -3,8 +3,8 @@
 import Image, os
 import color_histogram as ah
 
-#image_path = './shoes_250001.jpg'
-image_path = './clothes_122164.jpg'
+image_path = './shoes_250002.jpg'
+#image_path = './clothes_122164.jpg'
 new_len = 512
 new_high = 512
 new_size = (new_len,new_high)
@@ -16,6 +16,6 @@ if __name__ == '__main__':
     #ah.get_added_color_histogram(ah.get_color_histogram(ah.otsu_rgb(image_path)))
     im = im.crop(box)
     ah.otsu_rgb(im).show()
-    ah.otsu_hsiv(im, 'hsv').show()
-    ah.otsu_hsiv(im, 'hsi').show()
+    #ah.otsu_hsiv(im, 'hsv').show()
+    #ah.otsu_hsiv(im, 'hsi').show()
 

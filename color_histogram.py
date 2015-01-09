@@ -208,8 +208,8 @@ def judge_front_bg(im, height, width, best, method):
     lower_count = 0
     upper_count = 0
     if method == 'hsi':
-        for i in range(lower_height, upper_height):
-            for j in range(lower_width, upper_width):
+        for j in range(lower_height, upper_height):
+            for i in range(lower_width, upper_width):
                 tmp = quantize_hsi(rgb_to_hsi(pixel_map[i, j]))
                 if tmp < best:
                     lower_count += 1
