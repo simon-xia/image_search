@@ -33,7 +33,7 @@ def calculate_fingerprint_two(filename):
     field2_name = 'center'
     field1_val = ah.get_color_histogram_percent(ah.otsu_hsiv(im, 'hsv'))
     #field2_val = ah.get_color_histogram_percent(ah.otsu_hsiv(im.crop(center_part), 'hsv'))
-    field2_val = ah.get_color_histogram_percent(im.crop(center_part), 'hsv')
+    field2_val = ah.get_color_histogram_percent(im.crop(center_part))
 
     return '*6\r\n$5\r\nHMSET\r\n$' + str(len(filename)) + '\r\n' + filename + '\r\n$' + str(len(field1_name)) + '\r\n' + field1_name + '\r\n$' + str(len(str(field1_val))) + '\r\n' + str(field1_val) + '\r\n$' + str(len(field2_name)) + '\r\n' + field2_name + '\r\n$' + str(len(str(field2_val))) + '\r\n' + str(field2_val) + '\r\n'
     
