@@ -35,6 +35,12 @@ Allowed_error = 0.0001
 new_len = 512
 new_high = 512
 new_size = (new_len,new_high)
+white_pixel = (255, 255, 255)
+# skin color range in RGB: 
+# R:193-255 G:170-249 B:144-249 
+skin_min_r = 193; skin_max_r = 255
+skin_min_g = 170; skin_max_g = 249
+skin_min_b = 144; skin_max_b = 249
 
 def float_equal(f1, f2):
     return math.fabs(f1-f2) <= Allowed_error
@@ -543,3 +549,13 @@ def similarity_measure_cm1(list1, list2):
         ret += similarity_measure_cm1_helper(i, j)
 
     return ret
+
+def filter_skin(im):
+    width, height = im.size
+    pixel_map = im.load()
+    for i in range(width):
+        for j in range(height):
+            if skin_min_r <= pixel_map[i, j][0] <= skin_max_r and skin_min_g <= pixel_map[i, j][1] <= skin_max_g and skin_min_b <= pixel_map[i, j][2] <= skin_max_b:
+                pixel_map[i, j] = white_pixel
+    
+    return im
