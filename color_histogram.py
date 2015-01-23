@@ -36,6 +36,7 @@ new_len = 512
 new_high = 512
 new_size = (new_len,new_high)
 white_pixel = (255, 255, 255)
+fill_color = (0, 255, 0)
 # skin color range in RGB: 
 # R:193-255 G:170-249 B:144-249 
 skin_min_r = 193; skin_max_r = 255
@@ -165,6 +166,8 @@ def str_to_list(string, element_type):
 # calculate the cosine similarity
 ############
 def get_cos(list1, list2):
+    if (float_equal(get_module(list1), 0) or float_equal(get_module(list2),0)):
+        return 0
     return float(get_dot_product(list1, list2)) / (get_module(list1)*get_module(list2))
 
 def get_dot_product(list1, list2):
@@ -204,26 +207,60 @@ def is_in_edge(i, j, width, height):
 
 #decide which is front and which is background
 #return 1 for <, 0 for >
+# fix: judge the background part instead of center part
 def judge_front_bg(im, height, width, best, method):
     pixel_map = im.load()
-    lower_height = height / 5
-    upper_height = height / 5 * 4
-    lower_width = width / 3
-    upper_width = width / 3 * 2
+ #   lower_height = height / 5
+ #   upper_height = height / 5 * 4
+ #   lower_width = width / 3
+ #   upper_width = width / 3 * 2
 
     lower_count = 0
     upper_count = 0
     if method == 'hsi':
-        for j in range(lower_height, upper_height):
-            for i in range(lower_width, upper_width):
+        for j in range(height / 4):
+            for i in range(width):
+                tmp = quantize_hsi(rgb_to_hsi(pixel_map[i, j]))
+                if tmp < best:
+                    lower_count += 1
+                elif tmp > best:
+                    upper_count += 1
+        
+        for j in range(height / 4, height):
+            for i in range(3 * width / 16):
+                tmp = quantize_hsi(rgb_to_hsi(pixel_map[i, j]))
+                if tmp < best:
+                    lower_count += 1
+                elif tmp > best:
+                    upper_count += 1
+                    
+        for j in range(height / 4, height):
+            for i in range(13 * width / 16, width):
                 tmp = quantize_hsi(rgb_to_hsi(pixel_map[i, j]))
                 if tmp < best:
                     lower_count += 1
                 elif tmp > best:
                     upper_count += 1
     elif method == 'hsv': #mark
-        for j in range(lower_height, upper_height):
-            for i in range(lower_width, upper_width):
+        for j in range(height / 4):
+            for i in range(width):
+                tmp = quantize_hsi(rgb_to_hsv(pixel_map[i, j]))
+                if tmp < best:
+                    lower_count += 1
+                elif tmp > best:
+                    upper_count += 1
+        
+        for j in range(height / 4, height):
+            for i in range(3 * width / 16):
+                tmp = quantize_hsi(rgb_to_hsv(pixel_map[i, j]))
+                if tmp < best:
+                    lower_count += 1
+                elif tmp > best:
+                    upper_count += 1
+                    
+                    
+        for j in range(height / 4, height):
+            for i in range(13 * width / 16, width):
                 tmp = quantize_hsi(rgb_to_hsv(pixel_map[i, j]))
                 if tmp < best:
                     lower_count += 1
@@ -231,11 +268,44 @@ def judge_front_bg(im, height, width, best, method):
                     upper_count += 1
 
     #print lower_count, upper_count
-    return 0 if lower_count < upper_count else 1
+    return 1 if lower_count < upper_count else 0
+
+# for rgb
+def judge_front_bg_rgb(im, height, width, best):
+    pixel_map = im.load()
+
+    lower_count = 0
+    upper_count = 0
+    for j in range(height / 4):
+        for i in range(width):
+            tmp = get_grey_scale(pixel_map[i, j])
+            if tmp < best:
+                lower_count += 1
+            elif tmp > best:
+                upper_count += 1
+    
+    for j in range(height / 4, height):
+        for i in range(3 * width / 16):
+            tmp = get_grey_scale(pixel_map[i, j])
+            if tmp < best:
+                lower_count += 1
+            elif tmp > best:
+                upper_count += 1
+                
+    for j in range(height / 4, height):
+        for i in range(13 * width / 16, width):
+            tmp = get_grey_scale(pixel_map[i, j])
+            if tmp < best:
+                lower_count += 1
+            elif tmp > best:
+                upper_count += 1
+
+    #print lower_count, upper_count
+    return 1 if lower_count < upper_count else 0
 
 #otsu method for hsv and hsi
 def otsu_hsiv(im, method):
-    (width, height) = im.size
+    width, height = im.size
     rgb_data_list = list(im.getdata())
     pixel_total = width * height
     white_pixel = (255, 255, 255)
@@ -344,34 +414,126 @@ def otsu_hsiv(im, method):
 
     pixel_map = im.load() #load() is much faster than getpixel()
     if method == 'hsi':
-        if judge_front_bg(im, height, width, best, method) == 0:
+        if judge_front_bg(im, height, width, best, method) == 0:                       
             for j in range(height):
                 for i in range(width):
                     if quantize_hsi(rgb_to_hsi(pixel_map[i,j])) < best:
-                        pixel_map[i, j] = white_pixel
+                        pixel_map[i, j] = fill_color
         else:
             for j in range(height):
                 for i in range(width):
                     if quantize_hsi(rgb_to_hsi(pixel_map[i,j])) > best:
-                        pixel_map[i, j] = white_pixel
+                        pixel_map[i, j] = fill_color
+
     elif method == 'hsv': #mark i, j
-        if judge_front_bg(im, height, width, best, method) == 0:
+        if judge_front_bg(im, height, width, best, method) == 0:                       
             for j in range(height):
                 for i in range(width):
                     if quantize_hsi(rgb_to_hsv(pixel_map[i, j])) < best:
-                        pixel_map[i, j] = white_pixel
+                        pixel_map[i, j] = fill_color
         else:
             for j in range(height):
                 for i in range(width):
                     if quantize_hsi(rgb_to_hsv(pixel_map[i, j])) > best:
-                        pixel_map[i, j] = white_pixel
+                        pixel_map[i, j] = fill_color
 
     return im 
 
+def red_noise_fliter(im):
+    width, height = im.size
+    rgb_data_list = list(im.getdata())
+    pixel_total = width * height
+    white_pixel = (255, 255, 255)
+    quantized_data = []
+    for tmp_rgb in rgb_data_list:
+        quantized_data.append(quantize_hsi(rgb_to_hsv(tmp_rgb)))
+
+    sorted_quantized_data = sorted(quantized_data) 
+
+    diff_index_set  = []
+    for tmp_index in range(len(sorted_quantized_data)):
+        if tmp_index == 0:
+            diff_index_set.append(tmp_index)
+            continue
+
+        if sorted_quantized_data[tmp_index - 1] != sorted_quantized_data[tmp_index]:
+            diff_index_set.append(tmp_index)
+
+    accumulated_set = []
+
+    tmp_total = 0
+    tmp_index = 1
+    lenth_of_diff_index_set = len(diff_index_set)
+    k = list(enumerate(sorted_quantized_data))
+    for i in k:
+        #print i
+        if tmp_index == lenth_of_diff_index_set:
+            tmp_total += i[1]
+            continue
+
+        if i[0] != diff_index_set[tmp_index]:
+            tmp_total += i[1]
+        else:
+            accumulated_set.append(tmp_total)
+            tmp_total += i[1]       #mark
+            tmp_index += 1
+    accumulated_set.append(tmp_total)
+
+    accumulated_total = tmp_total
+
+    lower_bound= min(quantized_data)
+    upper_bound= max(quantized_data)
+    max_inter_class_var = 0
+    best= 0
+    split_index = 0
+    for tmp_test in range(lower_bound, upper_bound):
+        for tmp_split in list(enumerate(diff_index_set)):
+            if sorted_quantized_data[tmp_split[1]] == tmp_test:
+                split_index = tmp_split[0]
+                break
+        if split_index == 0 or split_index == lenth_of_diff_index_set - 1:
+            continue
+
+        count_less = diff_index_set[split_index]
+        count_greater = pixel_total - diff_index_set[split_index + 1]
+        avg_less = float(accumulated_set[split_index-1]) / count_less
+        avg_greater = float(accumulated_total - accumulated_set[split_index]) / count_greater 
+
+        tmp_inter_class_val = float(math.pow(avg_greater - avg_less, 2) * count_less * count_greater) / math.pow(pixel_total, 2)
+        if  tmp_inter_class_val > max_inter_class_var:
+            max_inter_class_var = tmp_inter_class_val
+            best = tmp_test
+
+
+    smaller_class = 0
+    
+    smaller_average_color = [0]*3
+    
+    
+    for h in range(height):
+        for w in range(width):
+            class_pixel = im.getpixel((w,h))
+                
+            L_pixel = quantize_hsi(rgb_to_hsv(class_pixel))
+           
+            if L_pixel < best:
+                smaller_class += 1
+                smaller_average_color[0] += class_pixel[0]
+                smaller_average_color[1] += class_pixel[1]
+                smaller_average_color[2] += class_pixel[2]
+           
+    for color_index in range(3):
+        if smaller_class != 0:
+            smaller_average_color[color_index] = int(smaller_average_color[color_index]/smaller_class)
+    
+    dif1 = smaller_average_color[0]-smaller_average_color[1]
+    dif2 = smaller_average_color[0]-smaller_average_color[2]
+    distance = math.sqrt(math.pow(dif1,2) + math.pow(dif2,2))
+    return distance 
 
 #otsu method for RGB
 def otsu_rgb(im):
-    (width, height) = im.size
+    width, height = im.size
     rgb_data_list = list(im.getdata())
     white_pixel = (255, 255, 255)
     grey_data = []
@@ -402,41 +564,103 @@ def otsu_rgb(im):
 
     #print best_grey
 
+    '''
+    if judge_front_bg_rgb(im, height, width, best_grey) == 0:
+        pixel_map = im.load()
+        for j in range(height):
+            for i in range(width):
+                if get_grey_scale(pixel_map[i, j]) < best_grey: #to be modify, judge before paint white
+                    pixel_map[i, j] = fill_color
+
+    else:
+        pixel_map = im.load()
+        for j in range(height):
+            for i in range(width):
+                if get_grey_scale(pixel_map[i, j]) > best_grey: #to be modify, judge before paint white
+                    pixel_map[i, j] = fill_color
+        
+    '''
     pixel_map = im.load()
     for j in range(height):
         for i in range(width):
             if get_grey_scale(pixel_map[i, j]) >= best_grey: #to be modify, judge before paint white
-                pixel_map[i, j] = white_pixel
+                pixel_map[i, j] = fill_color
             if is_in_edge(i, j, width, height):  #ignore the edge
-                pixel_map[i, j] = white_pixel
+                pixel_map[i, j] = fill_color
 
     return im
 
-#here is two kinds of histogrm: percent histogram and total mount histogram
+#color histogram in hsv color space
+def get_hsv_color_histogram_percent(im):
+    width, height = im.size
+    pixel_total = width * height
+    color_dic = {}
+
+    for i in range(72):
+        color_dic[i] = 0;
+
+    for i in range(width):
+        for j in range(height):
+            tmp_pixel = im.getpixel((i,j))
+            color_dic[quantize_hsi(rgb_to_hsv(tmp_pixel))] += 1
+
+    result_list = []
+
+    for i in range(72):
+        result_list.append(float(color_dic[i]) / pixel_total)
+    #print result_list
+    return result_list
+
+#here is two kinds of histogram: percent histogram and total mount histogram
 def get_color_histogram_percent(im):
-    (width, height) = im.size
+    width, height = im.size
     pixel_total = width * height
     divide_level = 64
     color_dic = {}
+
+    interval_count = 0
 
     for i in range(4):
         for j in range(4):
             for k in range(4):
                 color_dic[(i,j,k)] = 0;
-
+    
+   # last_area = (im.getpixel((0,0))[0]/divide_level,im.getpixel((0,0))[0]/divide_level,im.getpixel((0,0))[0]/divide_level)
+    
+                
     for i in range(width):
         for j in range(height):
             tmp_pixel = im.getpixel((i,j))
-            color_dic[(tmp_pixel[0]/divide_level, tmp_pixel[1]/divide_level, tmp_pixel[2]/divide_level)] += 1
+            now_area = (tmp_pixel[0]/divide_level, tmp_pixel[1]/divide_level, tmp_pixel[2]/divide_level)
+   #         if last_area != now_area:
+   #             interval_count += 1  
+   #             last_area = now_area
+            
+            if tmp_pixel != fill_color:    
+                color_dic[now_area] += 1 
+            else:
+                pixel_total -= 1    
+            #color_dic[(tmp_pixel[0]/divide_level, tmp_pixel[1]/divide_level, tmp_pixel[2]/divide_level)] += 1
 
     result_list = []
 
-    for i in range(4):
-        for j in range(4):
-            for k in range(4):
-                result_list.append(float(color_dic[(i,j,k)]) / pixel_total)
+    #print pixel_total
+    if pixel_total != 0:
+        for i in range(4):
+            for j in range(4):
+                for k in range(4):
+                    result_list.append(float(color_dic[(i,j,k)]) / pixel_total)
+
+    else:
+        for i in range(4):
+            for j in range(4):
+                for k in range(4):
+                    result_list.append(0.0)
+
     #print result_list
+    #result_list.append(float(interval_count))
     return result_list
+
 
 #get 64RGB color histogram, divide each color channel into 4 section
 def get_color_histogram(im):
